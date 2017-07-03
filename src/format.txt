@@ -1,0 +1,33 @@
+An SMV file has three sections, concatenated together:
+1) An IMA ADPCM .wav file, with header.
+2) An SMV header, described below.
+3) A number of .jpeg files, with headers, each prepended by a 24-bit (3-byte)
+   little-endian value representing the size, and buffered at the end with
+   nulls such that they are at predictable locations (the jpeg modulo).
+
+The SMV header is a magic string in ASCII followed by a number of 24-bit
+(3-byte) little-endian values. The following is an example SMV header. Note
+that the first entry is the exact ASCII string as it appears in the SMV file,
+but the rest are the decimal representation of 24-bit little-endian values.
+
+SMV002000       magic
+128             width
+160             height
+16              header length in 3-byte words (starting at '002' in magic)
+1               apparently constant
+8533            jpeg modulo
+9               fps
+1875            # of frames
+1               apparently constant
+0               apparently constant
+3               frames per jpeg
+65793           padding? (65793 == 0x010101)
+65793           padding?
+65793           padding?
+65793           padding?
+
+
+Default qualities:
+"High" == 35kBps
+"Medium" == 25kBps
+"Low" == 16kBps

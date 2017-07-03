@@ -1,0 +1,149 @@
+#!/bin/bash
+# Copyright (c) 2007  Gregor Richards
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+W=160
+H=128
+FR=16
+FPJ=
+Q=25
+INFILE=
+OUTFILE=
+PREFIX="`dirname $0`"
+
+VFPRE=
+VFPOST=
+AFPRE=
+AFPOST=
+
+while [ "$#" != "0" ]
+do
+    if [ "$1" = "-w" ]
+    then
+        shift
+        W="$1"
+        ${AFPOST}shift
+    elif [ "$1" = "-h" ]
+    then
+        shift
+        H="$1"
+        shift
+    elif [ "$1" = "-f" ]
+    then
+        shift
+        FR="$1"
+        shift
+    elif [ "$1" = "-fpj" ]
+    then
+        shift
+        FPJ="$1"
+        shift
+    elif [ "$1" = "-q" ]
+    then
+        shift
+        Q="$1"
+        shift
+    elif [ "$1" = "-o" ]
+    then
+        shift
+        OUTFILE="$1"
+        shift
+    elif [ "$1" = "-vfpre" ]
+    then
+        shift
+        VFPRE="$1,"
+        shift
+    elif [ "$1" = "-vfpost" ]
+    then
+        shift
+        VFPOST=",$1"
+        shift
+    elif [ "$1" = "-afpre" ]
+    then
+        shift
+        AFPRE="$1,"
+        shift
+    elif [ "$1" = "-afpost" ]
+    then
+        shift
+        AFPOST=",$1"
+        shift
+    else
+        INFILE="$1"
+        shift
+    fi
+done
+
+if [ "$INFILE" = "" -o "$OUTFILE" = "" ]
+then
+    echo 'Use: smvconv <options> <input file>'
+    echo 'Options:'
+    echo '    -o <output file> (required argument)'
+    echo '    -w <width>: default 160'
+    echo '    -h <height>: default 128'
+    echo '    -f <framerate>: default 16'
+    echo '    -fpj <frames per jpeg file>: defaults to the framerate'
+    echo '    -q <quality>: 0-100, recommended <=85, default 25'
+    echo '    -vfpre <filters>: mencoder video filters to perform before resizing'
+    echo '    -vfpost <filters>: mencoder video filters to perform after resizing'
+    echo '    -afpre <filters>: mencoder audio filters to perform before resampling'
+    echo '    -afpost <filters>: mencoder audio filters to perform after resampling'
+    exit 1
+fi
+
+if [ "$FPJ" = "" ]
+then
+    FPJ="$FR"
+fi
+
+die()
+{
+    echo "$@"
+    exit 1
+}
+
+mkdir -p $OUTFILE.video || die "Failed to create $OUTFILE.video"
+
+# Conversion
+mencoder $INFILE -ovc lavc -oac pcm \
+    -lavcopts vcodec=ffv1 \
+    -ofps $FR/$FPJ \
+    -vf ${VFPRE}expand=:::::$W/$H,scale=$W:$H,tile=1:$FPJ:$FPJ:0:0${VFPOST} -sws 9 \
+    -af ${AFPRE}resample=11025${AFPOST} -o $OUTFILE.video.avi || die "Failed to convert"
+mplayer $OUTFILE.video.avi \
+    -vo jpeg:quality=$Q:outdir="$OUTFILE.video":maxfiles=1000000 \
+    -nosound -ac null -ao null -benchmark || die "Failed to convert"
+ffmpeg -i $OUTFILE.video.avi -vn -acodec adpcm_ima_wav -ab 89 $OUTFILE.audio.wav || die "Failed to convert"
+rm -f $OUTFILE.video.avi
+
+# Get the frame count
+FRAMES="`ls -1 $OUTFILE.video/ | wc -l`"
+FRAMES=$(( FRAMES * FPJ ))
+
+# Figure out the longest frame for the jpeg modulo
+LONGESTF=`ls -1S "$OUTFILE.video" | head -n 1`
+LONGEST=`wc -c "$OUTFILE.video/$LONGESTF" | sed 's/ .*//'`
+
+# Put it all together
+find $OUTFILE.video -name '*.jpg' | sort |
+    $PREFIX/smvcombine $W $H $FR $FRAMES $FPJ $LONGEST $OUTFILE.audio.wav > $OUTFILE
+
+# Get rid of cruft
+rm -rf $OUTFILE.video $OUTFILE.audio.wav
