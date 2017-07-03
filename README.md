@@ -8,6 +8,8 @@ by Phillips.
 This code was recovered from http://codu.org/smvconv/
 which just disappeared.
 
+[https://wiki.multimedia.cx/index.php?title=SMV Further information regarding file format.]
+
 The following description is from the original website.
 
 smvconv
