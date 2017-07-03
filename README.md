@@ -8,7 +8,7 @@ by Phillips.
 This code was recovered from http://codu.org/smvconv/
 which just disappeared.
 
-[https://wiki.multimedia.cx/index.php?title=SMV Further information regarding file format.]
+[[https://wiki.multimedia.cx/index.php?title=SMV Further information regarding file format.]]
 
 The following description is from the original website.
 
@@ -23,7 +23,7 @@ smvconv is distributed under the MIT/X11 license.
 
 BIG FAT NOTE: This converter is EXTREMELY preliminary. In fact, I haven't even tested it - I don't have my player yet. It's based entirely on producing similar output to the (ridiculously terrible) Windows converters I could find.
 
-[src/ smvconv 2007-11-06]
+[[src/ smvconv 2007-11-06]]
 
 To build smvconv, just cd into the smvconv directory and type `make`. smvconv itself is a shell script, but it depends on smvcombine, which is a C program.
 
